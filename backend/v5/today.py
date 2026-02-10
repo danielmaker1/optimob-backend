@@ -1,39 +1,66 @@
 """
 V5 – Capa operativa mínima
-Este módulo responde a una única pregunta:
+Módulo principal para responder:
 ¿Qué pasa HOY para un usuario?
 """
 
 from datetime import date
+from typing import Optional
 
 
-def get_today(user_id: str, day: date | None = None) -> dict:
+def get_today(
+    user_id: str,
+    day: Optional[date] = None,
+    role: str = "passenger"
+) -> dict:
     """
     Devuelve el estado operativo del día para un usuario.
-    Versión hardcodeada (MVP inicial).
+
+    role:
+        - "passenger"
+        - "carpool_driver"
     """
 
-    return {
-        "date": (day or date.today()).isoformat(),
-        "user_id": user_id,
-        "role": "passenger",
-        "status": "pending",
-        "trips": [
+    today = (day or date.today()).isoformat()
+
+    office = {
+        "name": "Oficina",
+        "lat": 40.4379,
+        "lng": -3.6796
+    }
+
+    pickup = {
+        "name": "Parada Plaza Castilla",
+        "lat": 40.4669,
+        "lng": -3.6883
+    }
+
+    if role == "carpool_driver":
+        trips = [
+            {
+                "type": "ida",
+                "status": "pending",
+                "mode": "carpool",
+                "time": "08:15",
+                "from": pickup,
+                "to": office,
+                "vehicle": {
+                    "type": "car",
+                    "capacity": 4,
+                    "occupied": 2
+                },
+                "route": None
+            }
+        ]
+    else:
+        trips = [
             {
                 "type": "ida",
                 "status": "pending",
                 "mode": "shuttle",
                 "time": "08:15",
-                "from": {
-                    "name": "Parada Plaza Castilla",
-                    "lat": 40.4669,
-                    "lng": -3.6883
-                },
-                "to": {
-                    "name": "Oficina",
-                    "lat": 40.4379,
-                    "lng": -3.6796
-                },
+                "from": pickup,
+                "to": office,
                 "route": None
             },
             {
@@ -41,23 +68,24 @@ def get_today(user_id: str, day: date | None = None) -> dict:
                 "status": "pending",
                 "mode": "shuttle",
                 "time": "18:00",
-                "from": {
-                    "name": "Oficina",
-                    "lat": 40.4379,
-                    "lng": -3.6796
-                },
-                "to": {
-                    "name": "Parada Plaza Castilla",
-                    "lat": 40.4669,
-                    "lng": -3.6883
-                },
+                "from": office,
+                "to": pickup,
                 "route": None
             }
         ]
+
+    return {
+        "date": today,
+        "user_id": user_id,
+        "role": role,
+        "status": "pending",
+        "trips": trips
     }
 
 
 if __name__ == "__main__":
-    # Prueba local mínima
-    result = get_today(user_id="demo_user")
-    print(result)
+    print("Passenger day:")
+    print(get_today(user_id="demo_user", role="passenger"))
+    print()
+    print("Carpool driver day:")
+    print(get_today(user_id="demo_user", role="carpool_driver"))
