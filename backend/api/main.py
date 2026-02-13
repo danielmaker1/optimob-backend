@@ -29,7 +29,9 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # temporalmente para desarrollo
+    allow_origins=[
+        "https://symmetrical-carnival-xrr9r5jg9w5fp9xv-5173.app.github.dev"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
