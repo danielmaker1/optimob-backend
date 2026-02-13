@@ -6,6 +6,7 @@ No modifica ni refactoriza el backend v5.
 """
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
@@ -19,6 +20,19 @@ app = FastAPI(
     title="OptiMob API",
     description="API HTTP mínima sobre backend v5",
     version="1.0.0"
+)
+
+origins = [
+    "http://localhost:5173",
+    "https://symmetrical-carnival-xrr9r5jg9w5fp9xv-5173.app.github.dev"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # temporalmente para desarrollo
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
