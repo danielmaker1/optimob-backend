@@ -7,6 +7,9 @@ Módulo principal para responder:
 from datetime import date
 from typing import Optional
 
+# Temporary in-memory store; replace with DB in production.
+from backend.v5.state_store import IN_MEMORY_VALIDATIONS
+
 
 def get_today(
     user_id: str,
@@ -73,6 +76,12 @@ def get_today(
                 "route": None
             }
         ]
+
+    # Temporary: apply in-memory validations so status reflects validated trips.
+    for trip in trips:
+        key = (user_id, trip["type"])
+        if key in IN_MEMORY_VALIDATIONS:
+            trip["status"] = IN_MEMORY_VALIDATIONS[key]
 
     return {
         "date": today,

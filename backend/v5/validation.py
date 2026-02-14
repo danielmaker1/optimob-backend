@@ -6,6 +6,9 @@ Permite confirmar (validar) un viaje del día.
 from datetime import datetime
 from typing import Dict
 
+# Temporary in-memory store; replace with DB in production.
+from backend.v5.state_store import IN_MEMORY_VALIDATIONS
+
 
 def validate_trip(
     user_id: str,
@@ -30,6 +33,9 @@ def validate_trip(
 
     if validated_by not in ["passenger", "driver", "shuttle_driver"]:
         raise ValueError("invalid validated_by")
+
+    # Temporary: persist validation in memory so get_today() reflects it.
+    IN_MEMORY_VALIDATIONS[(user_id, trip_type)] = "confirmed"
 
     return {
         "user_id": user_id,
