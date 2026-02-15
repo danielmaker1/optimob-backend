@@ -13,6 +13,7 @@ from typing import Optional
 # Importar funciones del backend v5
 from backend.v5.today import get_today
 from backend.v5.validation import validate_trip
+from backend.v5.carpool import create_carpool_route
 
 
 # Crear aplicación FastAPI
@@ -43,6 +44,12 @@ class ValidateTripRequest(BaseModel):
     user_id: str
     trip_type: str
     validated_by: str
+
+
+class CreateCarpoolRequest(BaseModel):
+    driver_id: str
+    capacity: int
+    stops: list  # [{"name": str, "lat": float, "lng": float}]
 
 
 # Endpoints
@@ -93,6 +100,30 @@ def endpoint_validate_trip(request: ValidateTripRequest):
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/carpool/create")
+def endpoint_create_carpool(request: CreateCarpoolRequest):
+    """
+    POST /carpool/create
+
+    Body:
+        - driver_id (str): ID del conductor
+        - capacity (int): Capacidad del vehículo
+        - stops (list): Paradas [{"name": str, "lat": float, "lng": float}]
+
+    Returns:
+        JSON con la ruta de carpool creada
+    """
+    try:
+        result = create_carpool_route(
+            driver_id=request.driver_id,
+            capacity=request.capacity,
+            stops=request.stops,
+        )
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
