@@ -118,6 +118,22 @@ def get_today(
     if has_carpool_route:
         result["role"] = "carpool_driver"
 
+    # ==========================================
+    # CARPOOL ROUTE INTEGRATION (MVP)
+    # ------------------------------------------
+    # If user operates as carpool_driver,
+    # attach their carpool route to today's response.
+    # Progressive integration without breaking trips.
+    # ==========================================
+    if result["role"] == "carpool_driver":
+        carpool_route = next(
+            (route for route in IN_MEMORY_CARPOOL_ROUTES.values()
+             if route.get("driver_id") == user_id),
+            None
+        )
+        if carpool_route is not None:
+            result["carpool_route"] = carpool_route
+
     return result
 
 
