@@ -9,6 +9,7 @@ from typing import Optional
 
 # Temporary in-memory store; replace with DB in production.
 from backend.v5.state_store import IN_MEMORY_VALIDATIONS
+from backend.v5.carpool_store import IN_MEMORY_CARPOOL_ROUTES
 
 
 def get_today(
@@ -102,6 +103,20 @@ def get_today(
         result["status"] = "confirmed"
     else:
         result["status"] = "pending"
+
+    # ==========================================
+    # DYNAMIC ROLE DETECTION (MVP)
+    # ------------------------------------------
+    # If the user has created a carpool route,
+    # they operate as carpool_driver for the day.
+    # This is temporary logic for MVP.
+    # ==========================================
+    has_carpool_route = any(
+        route.get("driver_id") == user_id
+        for route in IN_MEMORY_CARPOOL_ROUTES.values()
+    )
+    if has_carpool_route:
+        result["role"] = "carpool_driver"
 
     return result
 
