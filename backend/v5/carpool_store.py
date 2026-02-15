@@ -14,5 +14,8 @@ IN_MEMORY_CARPOOL_ROUTES = {}
 #     "driver_id": str,
 #     "capacity": int,
 #     "stops": list,  # [{"name": str, "lat": float, "lng": float}]
-#     "status": "active"
+#     "status": "active",
+#     "passengers": [  # Pasajeros asignados a la ruta (recurso colectivo MVP)
+#         {"user_id": str, "status": "pending"}
+#     ]
 # }

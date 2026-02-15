@@ -36,9 +36,41 @@ def create_carpool_route(
         "capacity": capacity,
         "stops": stops,
         "status": "active",
+        "passengers": [],  # Pasajeros asignados (recurso colectivo MVP)
     }
 
     # Almacenar en memoria (temporal; sustituir por DB en producción).
     IN_MEMORY_CARPOOL_ROUTES[route_id] = route
+
+    return route
+
+
+def assign_mock_passengers(driver_id: str, passengers: List[str]) -> dict:
+    """
+    Asigna pasajeros a la ruta del conductor (MVP: asignación simulada en memoria).
+    Respeta la capacidad de la ruta. Cada pasajero se añade con status "pending".
+
+    Args:
+        driver_id: ID del conductor (dueño de la ruta).
+        passengers: Lista de user_id de pasajeros a asignar.
+
+    Returns:
+        La ruta actualizada con los pasajeros añadidos (respetando capacity).
+
+    Raises:
+        ValueError: Si no existe ruta para el driver_id.
+    """
+    route_id = f"carpool_{driver_id}"
+    if route_id not in IN_MEMORY_CARPOOL_ROUTES:
+        raise ValueError(f"No carpool route found for driver {driver_id}")
+
+    route = IN_MEMORY_CARPOOL_ROUTES[route_id]
+    capacity = route["capacity"]
+    current = route.setdefault("passengers", [])
+
+    # MVP: asignación simulada; respetar capacity (plazas para pasajeros).
+    slots_left = max(0, capacity - len(current))
+    for user_id in passengers[:slots_left]:
+        current.append({"user_id": user_id, "status": "pending"})
 
     return route
