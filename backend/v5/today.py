@@ -83,13 +83,27 @@ def get_today(
         if key in IN_MEMORY_VALIDATIONS:
             trip["status"] = IN_MEMORY_VALIDATIONS[key]
 
-    return {
+    result = {
         "date": today,
         "user_id": user_id,
         "role": role,
         "status": "pending",
         "trips": trips
     }
+
+    # ==========================================
+    # STATUS AGGREGATION LOGIC
+    # ------------------------------------------
+    # The overall day status reflects the state
+    # of individual trips. If all trips are
+    # confirmed, the day is considered confirmed.
+    # ==========================================
+    if all(trip["status"] == "confirmed" for trip in trips):
+        result["status"] = "confirmed"
+    else:
+        result["status"] = "pending"
+
+    return result
 
 
 if __name__ == "__main__":
