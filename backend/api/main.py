@@ -50,6 +50,8 @@ class CreateCarpoolRequest(BaseModel):
     driver_id: str
     capacity: int
     stops: list  # [{"name": str, "lat": float, "lng": float}]
+    date: str    # "YYYY-MM-DD"
+    time: str    # "HH:MM"
 
 
 class AssignCarpoolPassengersRequest(BaseModel):
@@ -118,6 +120,8 @@ def endpoint_create_carpool(request: CreateCarpoolRequest):
         - driver_id (str): ID del conductor
         - capacity (int): Capacidad del vehículo
         - stops (list): Paradas [{"name": str, "lat": float, "lng": float}]
+        - date (str): "YYYY-MM-DD"
+        - time (str): "HH:MM"
 
     Returns:
         JSON con la ruta de carpool creada
@@ -127,6 +131,8 @@ def endpoint_create_carpool(request: CreateCarpoolRequest):
             driver_id=request.driver_id,
             capacity=request.capacity,
             stops=request.stops,
+            date=request.date,
+            time=request.time,
         )
         return result
     except Exception as e:

@@ -14,18 +14,23 @@ def create_carpool_route(
     driver_id: str,
     capacity: int,
     stops: List[Dict[str, Any]],
+    date: str,
+    time: str,
 ) -> dict:
     """
     Crea una ruta de carpooling y la guarda en el store en memoria (MVP).
     El conductor queda registrado como dueño de la ruta.
+    El rol carpool_driver en /today dependerá de que la fecha de la ruta sea la del día consultado.
 
     Args:
         driver_id: ID del usuario conductor.
         capacity: Capacidad máxima del vehículo.
         stops: Lista de paradas [{"name": str, "lat": float, "lng": float}].
+        date: Fecha de la ruta (formato "YYYY-MM-DD").
+        time: Hora de la ruta (formato "HH:MM").
 
     Returns:
-        La ruta creada con route_id, driver_id, capacity, stops, status.
+        La ruta creada con route_id, driver_id, capacity, stops, date, time, status.
     """
     # Generar identificador simple para la ruta (MVP: un conductor, una ruta activa).
     route_id = f"carpool_{driver_id}"
@@ -36,6 +41,8 @@ def create_carpool_route(
         "capacity": capacity,
         "stops": stops,
         "status": "active",
+        "date": date,   # Rol carpool_driver solo si route["date"] == día consultado (MVP)
+        "time": time,
         "passengers": [],  # Pasajeros asignados (recurso colectivo MVP)
     }
 

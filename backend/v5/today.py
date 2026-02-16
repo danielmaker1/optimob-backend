@@ -105,17 +105,17 @@ def get_today(
         result["status"] = "pending"
 
     # ==========================================
-    # DYNAMIC ROLE DETECTION (MVP)
+    # DATE-BASED ROLE DETECTION (MVP)
     # ------------------------------------------
-    # If the user has created a carpool route,
-    # they operate as carpool_driver for the day.
-    # This is temporary logic for MVP.
+    # User operates as carpool_driver only
+    # if they have a carpool route scheduled
+    # for today's date.
     # ==========================================
-    has_carpool_route = any(
-        route.get("driver_id") == user_id
+    has_carpool_route_today = any(
+        route.get("driver_id") == user_id and route.get("date") == result["date"]
         for route in IN_MEMORY_CARPOOL_ROUTES.values()
     )
-    if has_carpool_route:
+    if has_carpool_route_today:
         result["role"] = "carpool_driver"
 
     # ==========================================
@@ -128,7 +128,7 @@ def get_today(
     if result["role"] == "carpool_driver":
         carpool_route = next(
             (route for route in IN_MEMORY_CARPOOL_ROUTES.values()
-             if route.get("driver_id") == user_id),
+             if route.get("driver_id") == user_id and route.get("date") == result["date"]),
             None
         )
         if carpool_route is not None:
