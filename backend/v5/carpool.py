@@ -9,6 +9,10 @@ from typing import Any, Dict, List
 
 from backend.v5.carpool_store import IN_MEMORY_CARPOOL_ROUTES
 
+# CARPOOL OPERATIONAL STATE TRANSITION (MVP)
+# Allowed statuses for carpool_route; /today reflects this for carpool_driver.
+ALLOWED_CARPOOL_STATUSES = {"active", "in_progress", "completed"}
+
 
 def create_carpool_route(
     driver_id: str,
@@ -80,4 +84,26 @@ def assign_mock_passengers(driver_id: str, passengers: List[str]) -> dict:
     for user_id in passengers[:slots_left]:
         current.append({"user_id": user_id, "status": "pending"})
 
+    return route
+
+
+def update_carpool_status(driver_id: str, new_status: str) -> dict:
+    """
+    CARPOOL OPERATIONAL STATE TRANSITION (MVP).
+    Actualiza el estado operativo de la ruta (active | in_progress | completed).
+    /today reflejará este estado en result["status"], result["trips"][0]["status"]
+    y result["carpool_route"]["status"] para carpool_driver.
+    No modifica passengers, capacity, date ni time.
+    """
+    if new_status not in ALLOWED_CARPOOL_STATUSES:
+        raise ValueError(
+            f"Invalid status {new_status!r}; allowed: {sorted(ALLOWED_CARPOOL_STATUSES)}"
+        )
+
+    route_id = f"carpool_{driver_id}"
+    if route_id not in IN_MEMORY_CARPOOL_ROUTES:
+        raise ValueError("Carpool route not found")
+
+    route = IN_MEMORY_CARPOOL_ROUTES[route_id]
+    route["status"] = new_status
     return route

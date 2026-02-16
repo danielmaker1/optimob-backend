@@ -13,7 +13,7 @@ from typing import Optional
 # Importar funciones del backend v5
 from backend.v5.today import get_today
 from backend.v5.validation import validate_trip
-from backend.v5.carpool import create_carpool_route, assign_mock_passengers
+from backend.v5.carpool import create_carpool_route, assign_mock_passengers, update_carpool_status
 
 
 # Crear aplicación FastAPI
@@ -57,6 +57,11 @@ class CreateCarpoolRequest(BaseModel):
 class AssignCarpoolPassengersRequest(BaseModel):
     driver_id: str
     passengers: list  # list[str] — user_id de pasajeros
+
+
+class UpdateCarpoolStatusRequest(BaseModel):
+    driver_id: str
+    status: str  # "active" | "in_progress" | "completed"
 
 
 # Endpoints
@@ -155,6 +160,30 @@ def endpoint_carpool_assign(request: AssignCarpoolPassengersRequest):
         result = assign_mock_passengers(
             driver_id=request.driver_id,
             passengers=request.passengers,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/carpool/status")
+def endpoint_carpool_status(request: UpdateCarpoolStatusRequest):
+    """
+    POST /carpool/status
+
+    Body:
+        - driver_id (str): ID del conductor
+        - status (str): Estado operativo. Permitidos: active, in_progress, completed
+
+    Returns:
+        JSON con la ruta actualizada. /today refleja este estado para carpool_driver.
+    """
+    try:
+        result = update_carpool_status(
+            driver_id=request.driver_id,
+            new_status=request.status,
         )
         return result
     except ValueError as e:
