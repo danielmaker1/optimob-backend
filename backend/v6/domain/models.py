@@ -14,6 +14,38 @@ class Employee:
     willing_driver: bool
 
 
+@dataclass(frozen=True)
+class ShuttleOption:
+    option_id: str
+    employee_ids: List[str]
+    centroid_lat: float
+    centroid_lng: float
+    estimated_size: int
+
+
+@dataclass(frozen=True)
+class CarpoolOption:
+    option_id: str
+    driver_id: str
+    passenger_ids: List[str]
+    estimated_size: int
+
+
+@dataclass
+class AssignmentResult:
+    selected_shuttles: List[ShuttleOption]
+    selected_carpools: List[CarpoolOption]
+    unassigned_employee_ids: List[str]
+
+
+@dataclass
+class DailyPlan:
+    date: str
+    shuttle_routes: List[dict]
+    carpool_routes: List[dict]
+    unassigned: List[str]
+
+
 @dataclass
 class ShuttleStop:
     stop_id: str
