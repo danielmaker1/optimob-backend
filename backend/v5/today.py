@@ -153,6 +153,15 @@ def get_today(
                 }
             ]
 
+    # ==========================================
+    # DRIVER STATUS RECALCULATION (MVP)
+    # ------------------------------------------
+    # For carpool_driver, the day status depends
+    # only on the carpool route status.
+    # ==========================================
+    if result["role"] == "carpool_driver" and "carpool_route" in result:
+        result["status"] = result["carpool_route"]["status"]
+
     return result
 
 
