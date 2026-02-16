@@ -44,6 +44,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from backend.v6.api.router import router as v6_router
+app.include_router(v6_router, prefix="/v6", tags=["v6"])
+
 
 # Modelos Pydantic para validación
 class ValidateTripRequest(BaseModel):
