@@ -13,7 +13,13 @@ from typing import Optional
 # Importar funciones del backend v5
 from backend.v5.today import get_today
 from backend.v5.validation import validate_trip
-from backend.v5.carpool import create_carpool_route, assign_mock_passengers, update_carpool_status
+from backend.v5.carpool import (
+    create_carpool_route,
+    assign_mock_passengers,
+    update_carpool_status,
+    passenger_respond,
+    confirm_pickup,
+)
 
 
 # Crear aplicación FastAPI
@@ -62,6 +68,17 @@ class AssignCarpoolPassengersRequest(BaseModel):
 class UpdateCarpoolStatusRequest(BaseModel):
     driver_id: str
     status: str  # "active" | "in_progress" | "completed"
+
+
+class PassengerRespondRequest(BaseModel):
+    driver_id: str
+    passenger_id: str
+    response: str  # "accepted" | "rejected"
+
+
+class PassengerPickupRequest(BaseModel):
+    driver_id: str
+    passenger_id: str
 
 
 # Endpoints
@@ -184,6 +201,57 @@ def endpoint_carpool_status(request: UpdateCarpoolStatusRequest):
         result = update_carpool_status(
             driver_id=request.driver_id,
             new_status=request.status,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/carpool/passenger/respond")
+def endpoint_carpool_passenger_respond(request: PassengerRespondRequest):
+    """
+    POST /carpool/passenger/respond — Pasajero confirma o rechaza plaza.
+
+    Body:
+        - driver_id (str): ID del conductor
+        - passenger_id (str): ID del pasajero
+        - response (str): "accepted" | "rejected"
+
+    Returns:
+        Ruta actualizada; estado de ruta recalculado automáticamente.
+    """
+    try:
+        result = passenger_respond(
+            driver_id=request.driver_id,
+            passenger_id=request.passenger_id,
+            response=request.response,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/carpool/passenger/pickup")
+def endpoint_carpool_passenger_pickup(request: PassengerPickupRequest):
+    """
+    POST /carpool/passenger/pickup — Conductor confirma recogida.
+
+    Body:
+        - driver_id (str): ID del conductor
+        - passenger_id (str): ID del pasajero
+
+    Ruta debe estar in_progress; pasajero debe estar accepted.
+    Returns:
+        Ruta actualizada; estado recalculado (completed si todos los accepted recogidos).
+    """
+    try:
+        result = confirm_pickup(
+            driver_id=request.driver_id,
+            passenger_id=request.passenger_id,
         )
         return result
     except ValueError as e:

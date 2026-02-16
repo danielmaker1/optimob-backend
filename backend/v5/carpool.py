@@ -13,6 +13,9 @@ from backend.v5.carpool_store import IN_MEMORY_CARPOOL_ROUTES
 # Allowed statuses for carpool_route; /today reflects this for carpool_driver.
 ALLOWED_CARPOOL_STATUSES = {"active", "in_progress", "completed"}
 
+# Enterprise Coordinated Carpool: passenger lifecycle (system assigns → passenger responds → driver confirms pickup).
+ALLOWED_PASSENGER_STATUSES = {"pending", "accepted", "rejected", "picked_up"}
+
 
 def create_carpool_route(
     driver_id: str,
@@ -79,11 +82,79 @@ def assign_mock_passengers(driver_id: str, passengers: List[str]) -> dict:
     capacity = route["capacity"]
     current = route.setdefault("passengers", [])
 
-    # MVP: asignación simulada; respetar capacity (plazas para pasajeros).
+    # Siempre crear pasajeros con status "pending" (asignación por sistema).
     slots_left = max(0, capacity - len(current))
     for user_id in passengers[:slots_left]:
         current.append({"user_id": user_id, "status": "pending"})
 
+    return route
+
+
+def _recalculate_route_status(route: dict) -> None:
+    """
+    Reglas automáticas de estado de ruta (Enterprise Coordinated Carpool).
+    Mutación in-place; no devuelve valor.
+    """
+    passengers = route.get("passengers", [])
+    statuses = [p.get("status") for p in passengers]
+
+    if not passengers:
+        route["status"] = "active"
+        return
+    if all(s == "rejected" for s in statuses):
+        route["status"] = "active"
+    elif any(s == "accepted" for s in statuses):
+        route["status"] = "in_progress"
+    elif any(s == "picked_up" for s in statuses):
+        route["status"] = "completed"
+    else:
+        route["status"] = "active"
+
+
+def passenger_respond(driver_id: str, passenger_id: str, response: str) -> dict:
+    """
+    El pasajero confirma o rechaza la plaza (accepted | rejected).
+    Recalcula estado global de la ruta automáticamente.
+    """
+    if response not in ("accepted", "rejected"):
+        raise ValueError(f"response must be 'accepted' or 'rejected', got {response!r}")
+
+    route_id = f"carpool_{driver_id}"
+    if route_id not in IN_MEMORY_CARPOOL_ROUTES:
+        raise ValueError("Carpool route not found")
+
+    route = IN_MEMORY_CARPOOL_ROUTES[route_id]
+    passengers = route.setdefault("passengers", [])
+    passenger = next((p for p in passengers if p.get("user_id") == passenger_id), None)
+    if passenger is None:
+        raise ValueError("Passenger not found on this route")
+
+    passenger["status"] = response
+    _recalculate_route_status(route)
+    return route
+
+
+def confirm_pickup(driver_id: str, passenger_id: str) -> dict:
+    """
+    Conductor confirma recogida. Ruta debe estar in_progress; pasajero debe estar accepted.
+    """
+    route_id = f"carpool_{driver_id}"
+    if route_id not in IN_MEMORY_CARPOOL_ROUTES:
+        raise ValueError("Carpool route not found")
+
+    route = IN_MEMORY_CARPOOL_ROUTES[route_id]
+    if route.get("status") != "in_progress":
+        raise ValueError("Route must be in_progress to confirm pickup")
+
+    passengers = route.get("passengers", [])
+    passenger = next((p for p in passengers if p.get("user_id") == passenger_id), None)
+    if passenger is None:
+        raise ValueError("Passenger not found on this route")
+    if passenger.get("status") != "accepted":
+        raise ValueError("Passenger must have status accepted to be picked up")
+
+    passenger["status"] = "picked_up"
+    _recalculate_route_status(route)
     return route
 
 
