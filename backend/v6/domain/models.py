@@ -1,50 +1,53 @@
 """
-V6 domain models. Dataclasses only. No FastAPI, no Pydantic.
+V6 domain models. Dataclasses only. No FastAPI, no external deps beyond dataclasses/typing.
 """
 
 from dataclasses import dataclass
-from typing import Any
+from typing import List
 
 
-@dataclass(frozen=False)
+@dataclass(frozen=True)
 class Employee:
     employee_id: str
     home_lat: float
     home_lng: float
-    work_lat: float
-    work_lng: float
-    arrival_window_start: str
-    arrival_window_end: str
     willing_driver: bool
 
 
 @dataclass
-class ShuttleOption:
-    option_id: str
-    employee_ids: list[str]
-    centroid_lat: float
-    centroid_lng: float
-    estimated_size: int
+class ShuttleStop:
+    stop_id: str
+    lat: float
+    lng: float
+    employee_ids: List[str]
 
 
 @dataclass
-class CarpoolOption:
-    option_id: str
-    driver_id: str
-    passenger_ids: list[str]
-    estimated_size: int
+class ShuttleRoute:
+    route_id: str
+    stop_ids: List[str]
+    employee_ids: List[str]
+    capacity: int
 
 
 @dataclass
-class AssignmentResult:
-    selected_shuttles: list[ShuttleOption]
-    selected_carpools: list[CarpoolOption]
-    unassigned_employee_ids: list[str]
+class NetworkDesign:
+    week_id: str
+    stops: List[ShuttleStop]
+    routes: List[ShuttleRoute]
+    baseline_cost_per_seat: float
 
 
-@dataclass
-class DailyPlan:
+@dataclass(frozen=True)
+class Reservation:
+    employee_id: str
     date: str
-    shuttle_routes: list[dict[str, Any]]
-    carpool_routes: list[dict[str, Any]]
-    unassigned: list[str]
+
+
+@dataclass
+class DailyAllocation:
+    date: str
+    shuttle_assignments: dict[str, str]  # employee_id -> route_id
+    overflow_carpool: List[str]  # employee_ids
+    occupancy_by_route: dict[str, float]  # route_id -> float
+    cost_per_seat: float
