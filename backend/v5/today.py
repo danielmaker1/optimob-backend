@@ -134,6 +134,25 @@ def get_today(
         if carpool_route is not None:
             result["carpool_route"] = carpool_route
 
+            # ==========================================
+            # DRIVER MODE OVERRIDE (MVP)
+            # ------------------------------------------
+            # If user is carpool_driver, shuttle trips
+            # are replaced by their carpool route.
+            # This ensures operational coherence.
+            # ==========================================
+            route = result["carpool_route"]
+            result["trips"] = [
+                {
+                    "type": "carpool_route",
+                    "status": route["status"],
+                    "mode": "carpool",
+                    "stops": route["stops"],
+                    "passenger_count": len(route.get("passengers", [])),
+                    "capacity": route["capacity"],
+                }
+            ]
+
     return result
 
 
