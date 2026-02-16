@@ -1,8 +1,9 @@
 """
 Scientific comparison: V4 Block 4 vs V6 shuttle stop engine.
-Same employee population, same parameters. One Folium map, side by side.
+Uses frozen V4 employee dataset. Deterministic, no randomness.
 """
 
+import csv
 import math
 import webbrowser
 from pathlib import Path
@@ -19,10 +20,7 @@ from backend.v6.domain.constraints import StructuralConstraints
 from backend.v6.domain.models import Employee
 
 # ---------- V4 constants (Block 4) ----------
-NUM_EMPLEADOS = 500
-SEED = 42
 COORDENADAS_OFICINA = (40.4168, -3.7038)
-R_KM_MUESTREO = 15.0
 ASSIGN_RADIUS_M = 1000
 MAX_CLUSTER = 50
 MIN_SHUTTLE = 6
@@ -36,29 +34,28 @@ FUSION_RADIUS = 150
 DIAMETER_MAX_M = 1500
 EXCLUDE_RADIUS_M = 1000
 
-M_PER_DEG_LAT = 111320.0
+FROZEN_CSV_PATH = Path(__file__).resolve().parent.parent / "data" / "v4_employees_frozen.csv"
 
 
-def _generate_same_population():
-    """Same SEED, center, radius, N as V4. Deterministic."""
-    rng = np.random.default_rng(SEED)
-    office_lat, office_lng = COORDENADAS_OFICINA
-    deg_per_km = 1.0 / 111.0
-    cos_lat = math.cos(math.radians(office_lat))
+def _load_frozen_employees():
+    """Load employees from frozen V4 CSV. Returns (empleados_data, employees). Deterministic."""
     empleados_data = []
-    for i in range(NUM_EMPLEADOS):
-        r = rng.uniform(0, R_KM_MUESTREO) ** 0.5 * R_KM_MUESTREO
-        th = rng.uniform(0, 2 * math.pi)
-        dx_km = r * math.cos(th)
-        dy_km = r * math.sin(th)
-        lat = office_lat + dy_km * deg_per_km
-        lon = office_lng + dx_km * deg_per_km / cos_lat
-        empleados_data.append({
-            "id": f"Emp_{i+1}",
-            "coordenadas_casa": (lat, lon),
-            "coordenadas_trabajo": COORDENADAS_OFICINA,
-        })
-    return empleados_data
+    employees = []
+    with open(FROZEN_CSV_PATH, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            eid = row["employee_id"].strip()
+            lat = float(row["home_lat"])
+            lng = float(row["home_lng"])
+            empleados_data.append({
+                "id": eid,
+                "coordenadas_casa": (lat, lng),
+                "coordenadas_trabajo": COORDENADAS_OFICINA,
+            })
+            employees.append(
+                Employee(employee_id=eid, home_lat=lat, home_lng=lng, willing_driver=False)
+            )
+    return empleados_data, employees
 
 
 def _run_v4_block4(empleados_data):
@@ -237,16 +234,8 @@ def _cluster_radius_m(latlon_list):
 
 
 def main():
-    empleados_data = _generate_same_population()
-    employees = [
-        Employee(
-            employee_id=e["id"],
-            home_lat=e["coordenadas_casa"][0],
-            home_lng=e["coordenadas_casa"][1],
-            willing_driver=False,
-        )
-        for e in empleados_data
-    ]
+    empleados_data, employees = _load_frozen_employees()
+    print(f"Loaded {len(employees)} employees from frozen V4 dataset")
     office_lat, office_lng = COORDENADAS_OFICINA
 
     final_clusters_v4, carpool_set_v4 = _run_v4_block4(empleados_data)
