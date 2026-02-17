@@ -3,6 +3,7 @@ V6 domain constraints. Dataclasses only. No FastAPI, no external deps beyond dat
 """
 
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -13,6 +14,10 @@ class StructuralConstraints:
     min_shuttle_occupancy: float
     detour_cap: float
     backfill_max_delta_min: float
+    # Block 4 cobertura (opcionales)
+    min_ok_far_m: Optional[float] = None  # distancia (m) a oficina para usar min_ok_far en zona lejana
+    min_ok_far: Optional[int] = None  # min miembros por cluster en zona lejana (ej. 6)
+    pair_radius_m: Optional[float] = None  # radio (m) para reabsorber residual en paradas; mayor = más cobertura
 
 
 @dataclass(frozen=True)

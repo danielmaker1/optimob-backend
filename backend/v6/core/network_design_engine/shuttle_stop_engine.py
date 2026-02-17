@@ -175,8 +175,10 @@ def run_shuttle_stop_opening(
     min_sep = getattr(constraints, "min_stop_sep_m", MIN_STOP_SEP_M)
     fallback_min = getattr(constraints, "fallback_min", FALLBACK_MIN)
     fallback_sep = getattr(constraints, "fallback_sep_m", FALLBACK_SEP_M)
-    pair_radius = getattr(constraints, "pair_radius_m", PAIR_RADIUS_M)
+    pair_radius = getattr(constraints, "pair_radius_m", None) or PAIR_RADIUS_M
     min_ok = getattr(constraints, "min_ok", MIN_OK)
+    min_ok_far_m = getattr(constraints, "min_ok_far_m", None)
+    min_ok_far = getattr(constraints, "min_ok_far", 6)
     max_ok = getattr(constraints, "max_ok", MAX_OK)
     fusion_radius = getattr(constraints, "fusion_radius", FUSION_RADIUS)
     diameter_max_m = getattr(constraints, "diameter_max_m", DIAMETER_MAX_M)
@@ -211,10 +213,19 @@ def run_shuttle_stop_opening(
                 assigned_mask[i] = True
                 break
 
+    def effective_min_ok(members: List[int]) -> int:
+        """min_ok adaptativo: si min_ok_far_m está definido, clusters lejos de oficina usan min_ok_far (ej. 6)."""
+        if min_ok_far_m is None or min_ok_far_m <= 0 or min_ok_far >= min_ok:
+            return min_ok
+        cxy = cluster_center_xy(members, X)
+        dist_to_office = float(np.linalg.norm(cxy))
+        return min_ok_far if dist_to_office > min_ok_far_m else min_ok
+
     kept_clusters: List[List[int]] = []
     for mems in members_list:
         n = len(mems)
-        if n < min_ok:
+        eff_min = effective_min_ok(mems)
+        if n < eff_min:
             continue
         if n > max_ok:
             k = int(math.ceil(n / max_ok))
@@ -222,7 +233,10 @@ def run_shuttle_stop_opening(
             labels = km.fit_predict(X[mems])
             for lab in range(k):
                 sub = [mems[i] for i in range(n) if labels[i] == lab]
-                if len(sub) >= min_ok:
+                if not sub:
+                    continue
+                sub_min = effective_min_ok(sub)
+                if len(sub) >= sub_min:
                     kept_clusters.append(sub)
         else:
             kept_clusters.append(mems)

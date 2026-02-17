@@ -13,6 +13,7 @@ Criterios de nivel:
 
 Uso (desde raíz del repo):
   python -m backend.v6.debug.evaluate_block4_v6
+  python -m backend.v6.debug.evaluate_block4_v6 --coverage   # preset cobertura Optimob
   python -m backend.v6.debug.evaluate_block4_v6 --csv backend/v6/data/v4_employees_frozen.csv
 """
 
@@ -122,16 +123,30 @@ def run_evaluation(
     office_lat: float = DEFAULT_OFFICE_LAT,
     office_lng: float = DEFAULT_OFFICE_LNG,
     min_sep_m: float = MIN_STOP_SEP_M,
+    use_coverage_params: bool = False,
 ) -> dict:
-    """Ejecuta Block 4 V6 y devuelve métricas y resultados de comprobaciones."""
-    constraints = StructuralConstraints(
-        assign_radius_m=float(ASSIGN_RADIUS_M),
-        max_cluster_size=MAX_CLUSTER,
-        bus_capacity=50,
-        min_shuttle_occupancy=0.7,
-        detour_cap=2.2,
-        backfill_max_delta_min=1.35,
-    )
+    """Ejecuta Block 4 V6 y devuelve métricas. Si use_coverage_params, usa preset cobertura Optimob."""
+    if use_coverage_params:
+        constraints = StructuralConstraints(
+            assign_radius_m=1200.0,
+            max_cluster_size=MAX_CLUSTER,
+            bus_capacity=50,
+            min_shuttle_occupancy=0.7,
+            detour_cap=2.2,
+            backfill_max_delta_min=1.35,
+            min_ok_far_m=3000.0,
+            min_ok_far=6,
+            pair_radius_m=450.0,
+        )
+    else:
+        constraints = StructuralConstraints(
+            assign_radius_m=float(ASSIGN_RADIUS_M),
+            max_cluster_size=MAX_CLUSTER,
+            bus_capacity=50,
+            min_shuttle_occupancy=0.7,
+            detour_cap=2.2,
+            backfill_max_delta_min=1.35,
+        )
     final_clusters, carpool_set = run_shuttle_stop_opening(
         employees, office_lat, office_lng, constraints
     )
@@ -181,6 +196,11 @@ def main():
     parser.add_argument(
         "--office-lng", type=float, default=DEFAULT_OFFICE_LNG, help="Longitud oficina"
     )
+    parser.add_argument(
+        "--coverage",
+        action="store_true",
+        help="Preset cobertura: assign_radius=1200m, pair_radius=450m, min_ok adaptativo (6 en zona lejana)",
+    )
     args = parser.parse_args()
 
     if not args.csv.exists():
@@ -189,11 +209,14 @@ def main():
 
     employees = load_employees(args.csv)
     print(f"Empleados cargados: {len(employees)} desde {args.csv}")
+    if args.coverage:
+        print("Preset: cobertura Optimob (radio 1200 m, reabsorción 450 m, min_ok adaptativo)")
 
     r = run_evaluation(
         employees,
         office_lat=args.office_lat,
         office_lng=args.office_lng,
+        use_coverage_params=args.coverage,
     )
 
     # ---- Métricas ----

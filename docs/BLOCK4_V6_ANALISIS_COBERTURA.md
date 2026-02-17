@@ -1,5 +1,24 @@
 # Análisis en profundidad: cobertura Block 4 V6
 
+## Mejoras para Optimob (parámetros y algoritmo)
+
+Se añadieron opciones para **priorizar cobertura** sin romper paridad con V4:
+
+| Mejora | Dónde | Efecto |
+|--------|--------|--------|
+| **min_ok adaptativo** | Motor | Clusters con centroide a **> 3 km** de oficina pueden mantenerse con **≥ 6** miembros (en vez de 8). Zonas dispersas ganan paradas. |
+| **Preset cobertura** | `StructuralConstraints` opcionales | `min_ok_far_m=3000`, `min_ok_far=6`, `pair_radius_m=450`, `assign_radius_m=1200` para más asignación. |
+| **Evaluador** | `evaluate_block4_v6 --coverage` | Ejecuta con preset cobertura y muestra métricas. |
+
+**Uso del preset en evaluación:**
+```bash
+python -m backend.v6.debug.evaluate_block4_v6 --coverage
+```
+
+**Uso en código:** pasar `StructuralConstraints(..., min_ok_far_m=3000.0, min_ok_far=6, pair_radius_m=450.0)` y, si se quiere, `assign_radius_m=1200` para radio mayor. Por defecto (sin estos campos) se mantiene el comportamiento V4.
+
+---
+
 ## Cómo obtener la comparación V4 vs V6 y el análisis
 
 **Opción A – CMD (recomendado)**  
