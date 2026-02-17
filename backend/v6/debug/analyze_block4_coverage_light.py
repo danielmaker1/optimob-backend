@@ -73,7 +73,7 @@ def _run_v4_style_in_meters(
     unassigned = np.ones(N, dtype=bool)
 
     def cov(i, mask, r=radius, c=cap):
-        nbrs = tree.query_radius(X[i : i + 1], r=r)[0]
+        nbrs = tree.query_ball_point(X[i], r=r)
         nbrs = [j for j in nbrs if mask[j]]
         if not nbrs:
             return [], []
@@ -261,7 +261,7 @@ def main():
     print()
 
     # ---------- 3. DATOS: densidad ----------
-    counts = tree.query_radius(X, r=ASSIGN_RADIUS_M, count_only=True)
+    counts = np.array([len(tree.query_ball_point(X[i], r=ASSIGN_RADIUS_M)) for i in range(N)])
     at_least_6 = (counts >= 6).sum()
     at_least_8 = (counts >= MIN_OK).sum()
 
