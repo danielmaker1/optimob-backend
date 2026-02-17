@@ -209,6 +209,7 @@ def _build_map(
     """Genera mapa Folium: empleados, paradas V6, oficina. Guarda HTML y opcionalmente abre en navegador."""
     import webbrowser
     import folium
+    from branca.element import Element
     employees_by_id = {e.employee_id: e for e in employees}
     m = folium.Map(location=[office_lat, office_lng], zoom_start=11)
     for e in employees:
@@ -248,6 +249,17 @@ def _build_map(
         popup="Oficina",
         icon=folium.Icon(color="green", icon="building", prefix="fa"),
     ).add_to(m)
+    # Leyenda: evitar confusión (rojo = excluidos, gris = shuttle)
+    legend_html = """
+    <div style="position: fixed; bottom: 30px; left: 10px; z-index: 1000; background: white; padding: 10px; border: 2px solid grey; border-radius: 5px;">
+    <p><b>Leyenda</b></p>
+    <p><span style="color:gray;">● Gris</span> = Asignados shuttle</p>
+    <p><span style="color:red;">● Rojo</span> = Excluidos (carpool/residual)</p>
+    <p><span style="color:blue;">● Azul</span> = Paradas shuttle</p>
+    <p><span style="color:green;">■ Verde</span> = Oficina</p>
+    </div>
+    """
+    m.get_root().html.add_child(Element(legend_html))
     m.save(str(out_path))
     if open_browser:
         webbrowser.open(f"file://{out_path.resolve()}")
