@@ -14,7 +14,8 @@ Criterios de nivel:
 Uso (desde raíz del repo):
   python -m backend.v6.debug.evaluate_block4_v6
   python -m backend.v6.debug.evaluate_block4_v6 --coverage   # preset cobertura Optimob
-  python -m backend.v6.debug.evaluate_block4_v6 --csv backend/v6/data/v4_employees_frozen.csv
+  python -m backend.v6.debug.evaluate_block4_v6 --map        # KPIs + mapa HTML (paradas, empleados, oficina)
+  python -m backend.v6.debug.evaluate_block4_v6 --coverage --map
 """
 
 import argparse
@@ -171,7 +172,86 @@ def run_evaluation(
         "min_pairwise_m": min_pairwise,
         "determinism_ok": det_ok,
         "determinism_msg": det_msg,
+        "final_clusters": final_clusters,
+        "carpool_set": carpool_set,
     }
+
+
+def _cluster_centroid_latlon(employee_ids: list[str], employees_by_id: dict) -> tuple[float, float]:
+    lat = sum(employees_by_id[eid].home_lat for eid in employee_ids) / len(employee_ids)
+    lng = sum(employees_by_id[eid].home_lng for eid in employee_ids) / len(employee_ids)
+    return (lat, lng)
+
+
+def _cluster_radius_m(latlon_list: list[tuple[float, float]]) -> float:
+    if len(latlon_list) < 2:
+        return 50.0
+    latlon_arr = np.array(latlon_list)
+    lat_rad = np.radians(latlon_arr[:, 0])
+    lng_rad = np.radians(latlon_arr[:, 1])
+    dlat = lat_rad[:, None] - lat_rad[None, :]
+    dlng = lng_rad[:, None] - lng_rad[None, :]
+    a = np.sin(dlat / 2) ** 2 + np.cos(lat_rad[:, None]) * np.cos(lat_rad[None, :]) * np.sin(dlng / 2) ** 2
+    c = 2 * np.arcsin(np.minimum(1.0, np.sqrt(a)))
+    dist_m = 6371000 * c
+    return float(np.max(dist_m)) + 20.0
+
+
+def _build_map(
+    employees: list[Employee],
+    final_clusters: list[list[str]],
+    carpool_set: set[str],
+    office_lat: float,
+    office_lng: float,
+    out_path: Path,
+    open_browser: bool = True,
+) -> None:
+    """Genera mapa Folium: empleados, paradas V6, oficina. Guarda HTML y opcionalmente abre en navegador."""
+    import webbrowser
+    import folium
+    employees_by_id = {e.employee_id: e for e in employees}
+    m = folium.Map(location=[office_lat, office_lng], zoom_start=11)
+    for e in employees:
+        color = "red" if e.employee_id in carpool_set else "gray"
+        folium.CircleMarker(
+            location=(e.home_lat, e.home_lng),
+            radius=4,
+            color=color,
+            fill=True,
+            fill_opacity=0.7,
+            weight=1,
+            popup=f"{e.employee_id} (carpool)" if e.employee_id in carpool_set else e.employee_id,
+        ).add_to(m)
+    for i, c in enumerate(final_clusters):
+        lat, lng = _cluster_centroid_latlon(c, employees_by_id)
+        pts = [(employees_by_id[eid].home_lat, employees_by_id[eid].home_lng) for eid in c]
+        r_m = _cluster_radius_m(pts)
+        folium.CircleMarker(
+            location=(lat, lng),
+            radius=12,
+            color="blue",
+            fill=True,
+            fill_opacity=0.8,
+            weight=2,
+            popup=f"Parada {i+1} · n={len(c)}",
+        ).add_to(m)
+        folium.Circle(
+            location=(lat, lng),
+            radius=r_m,
+            color="blue",
+            fill=False,
+            weight=2,
+            dash_array="5,5",
+        ).add_to(m)
+    folium.Marker(
+        location=[office_lat, office_lng],
+        popup="Oficina",
+        icon=folium.Icon(color="green", icon="building", prefix="fa"),
+    ).add_to(m)
+    m.save(str(out_path))
+    if open_browser:
+        webbrowser.open(f"file://{out_path.resolve()}")
+    print(f"\nMapa guardado: {out_path}")
 
 
 def level_for_coverage(coverage_pct: float) -> str:
@@ -201,6 +281,11 @@ def main():
         action="store_true",
         help="Preset cobertura: assign_radius=1200m, pair_radius=450m, min_ok adaptativo (6 en zona lejana)",
     )
+    parser.add_argument(
+        "--map",
+        action="store_true",
+        help="Genera mapa HTML (paradas, empleados, oficina) y abre en el navegador",
+    )
     args = parser.parse_args()
 
     if not args.csv.exists():
@@ -218,6 +303,10 @@ def main():
         office_lng=args.office_lng,
         use_coverage_params=args.coverage,
     )
+
+    # ---- KPIs (resumen) ----
+    print("\n--- KPIs Block 4 V6 ---")
+    print(f"  Cobertura: {r['coverage_pct']:.1f}%  |  Paradas: {r['n_clusters']}  |  Asignados shuttle: {r['n_employees'] - r['n_excluded']}  |  Excluidos: {r['n_excluded']}  |  Tamaño medio: {r['mean_size']:.1f}")
 
     # ---- Métricas ----
     print("\n--- Métricas Block 4 V6 ---")
@@ -245,6 +334,19 @@ def main():
         print("  Resumen:         NIVEL FAIL (revisar criterios)")
     else:
         print("  Resumen:         NIVEL WARN (aceptable con revisión)")
+
+    # ---- Mapa ----
+    if args.map:
+        out_path = Path(__file__).resolve().parent / "block4_v6_map.html"
+        _build_map(
+            employees,
+            r["final_clusters"],
+            r["carpool_set"],
+            args.office_lat,
+            args.office_lng,
+            out_path,
+            open_browser=True,
+        )
 
     return 0
 
