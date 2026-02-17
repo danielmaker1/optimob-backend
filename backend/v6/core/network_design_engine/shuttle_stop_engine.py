@@ -79,8 +79,13 @@ def greedy_open_stops(
     radius: float,
     cap: int,
     initial_unassigned_mask: np.ndarray,
+    min_sep: float,
 ) -> Tuple[List[np.ndarray], List[List[int]], np.ndarray]:
-    """Greedy stop opening: best gain >= min_threshold until no progress."""
+    """
+    Greedy stop opening: best gain >= min_threshold until no progress.
+    Enforces minimum separation (min_sep) between stop centers.
+    Tie-break: same gain -> smaller center index (deterministic).
+    """
     unassigned = initial_unassigned_mask.copy()
     centers_xy: List[np.ndarray] = []
     members_list: List[List[int]] = []
@@ -89,11 +94,16 @@ def greedy_open_stops(
         progressed = False
         best: dict = {"gain": 0, "center": None, "take": None}
         for i in np.where(unassigned)[0]:
+            if too_close(X[i], centers_xy, min_sep):
+                continue
             take, _ = coverage_for_center(
                 int(i), X, tree, unassigned, radius=radius, cap=cap
             )
             gain = len(take)
-            if gain > best["gain"]:
+            if gain > best["gain"] or (
+                gain == best["gain"]
+                and (best["center"] is None or i < best["center"])
+            ):
                 best.update({"gain": gain, "center": int(i), "take": take})
         if best["center"] is not None and best["gain"] >= min_threshold:
             centers_xy.append(X[best["center"]].copy())
@@ -174,11 +184,11 @@ def run_shuttle_stop_opening(
 
     unassigned_shuttle_mask = np.ones(N, dtype=bool)
     centers_xy, members_list, unassigned = greedy_open_stops(
-        X, tree, min_shuttle, radius, cap, unassigned_shuttle_mask
+        X, tree, min_shuttle, radius, cap, unassigned_shuttle_mask, min_sep
     )
     if len(centers_xy) == 0:
         centers_xy, members_list, unassigned = greedy_open_stops(
-            X, tree, fallback_min, radius, cap, unassigned_shuttle_mask
+            X, tree, fallback_min, radius, cap, unassigned_shuttle_mask, min_sep
         )
 
     for i in range(len(centers_xy)):
