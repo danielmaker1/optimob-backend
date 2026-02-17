@@ -1,0 +1,103 @@
+# Análisis en profundidad: cobertura Block 4 V6
+
+## Cómo obtener la comparación V4 vs V6 y el análisis
+
+**Opción A – CMD (recomendado)**  
+1. Abre **CMD** (no PowerShell).  
+2. `cd c:\dev\optimob-backend`  
+3. `python -m backend.v6.debug.analyze_block4_coverage_light`
+
+**Opción B – PowerShell**  
+1. Abre PowerShell.  
+2. `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`  
+3. `cd c:\dev\optimob-backend`  
+4. `python -m backend.v6.debug.analyze_block4_coverage_light`
+
+El script no usa geopandas ni folium; suele tardar **pocos segundos**. La salida incluye la comparación V4 vs V6 y el análisis de datos, reglas y umbral.
+
+---
+
+## 1. ¿Es normal la cobertura baja? Comparación con V4
+
+Si V4 y V6 dan **cobertura muy similar** (mismo orden de magnitud, p. ej. ~28% ambos), entonces:
+
+- El motor V6 está **alineado** con la lógica de V4.
+- La cobertura baja **no es un fallo de V6**, sino del dataset y de las reglas de negocio (que son las mismas en V4 y V6).
+
+La única diferencia relevante es que **V6 aplica separación mínima** (`min_sep`) entre paradas; V4 no. Eso puede hacer que V6 abra un poco menos de paradas (más conservador), pero el nivel de cobertura debería ser del mismo orden.
+
+**Conclusión:** Hacer la comparación con V4 antes de cambiar el motor. Si ambos dan ~25–35%, el criterio de “nivel” (umbral 85%) es lo que hay que revisar, no el algoritmo.
+
+---
+
+## 2. Datos: dispersión y densidad
+
+### 2.1 Dispersión respecto a la oficina
+
+- **Radio de asignación** = 1000 m y **exclude_radius_m** = 1000 m.
+- Empleados **muy lejos** de la oficina:
+  - Pueden quedar fuera del radio de 1000 m de cualquier parada candidata.
+  - O formar clusters cuyo **centroide** cae a < 1000 m de la oficina → todo el cluster se manda a carpool (regla de exclusión).
+- Si la **mayoría** de los 500 empleados está a > 2000 m de la oficina, es normal que solo una parte pueda entrar en shuttle.
+
+El script muestra:
+- Distancia mínima, máxima y media a la oficina.
+- Porcentaje dentro de 500 m, 1000 m, 2000 m.
+
+**Interpretación:** Cuantos más empleados lejos de la oficina, más limitada la cobertura shuttle por definición del negocio (radio y exclusión).
+
+### 2.2 Densidad (vecinos en 1000 m)
+
+- Cada parada agrupa empleados dentro de **assign_radius_m = 1000 m**.
+- Para que un cluster se **mantenga**, debe tener al menos **min_ok = 8** miembros (los que tienen < 8 se descartan).
+- Si **pocos** empleados tienen “≥ 8 vecinos dentro de 1000 m”, el algoritmo no puede formar muchos clusters válidos.
+
+El script muestra:
+- Número de vecinos en 1000 m (media, min, max).
+- Cuántos empleados tienen ≥ 6 vecinos (min_shuttle) y ≥ 8 (min_ok).
+
+**Interpretación:** Si solo un 20–30% tiene 8+ vecinos en 1000 m, la cobertura shuttle tiene un **techo** natural por densidad; 85% sería inalcanzable sin relajar reglas o cambiar datos.
+
+---
+
+## 3. Reglas estrictas
+
+Block 4 aplica varias reglas que **reducen** la cobertura shuttle:
+
+| Regla | Efecto |
+|-------|--------|
+| **min_ok = 8** | Clusters con < 8 miembros se descartan → esos empleados van a residual/carpool. |
+| **max_ok = 40** | Clusters grandes se parten (KMeans); subclusters con < 8 se descartan. |
+| **exclude_radius_m = 1000** | Si el **centroide** del cluster está a < 1000 m de la oficina, todo el cluster va a carpool (no se considera parada shuttle). |
+| **Fusión** | Clusters muy cercanos se fusionan si cumplen tamaño y diámetro; puede dejar menos paradas. |
+
+Con **poca densidad** y **dispersión**:
+- Se forman pocos clusters con ≥ 8 miembros.
+- Varios clusters pueden quedar “cerca de oficina” y excluirse.
+- Resultado típico: **20–40%** de cobertura shuttle. No es un bug; es consecuencia de datos + reglas.
+
+---
+
+## 4. Umbral de “nivel” (85% = OK)
+
+- El evaluador marca **FAIL** si cobertura < 85%.
+- En un dataset **disperso** y con las reglas actuales, 85% es **poco realista**.
+- Entonces el **FAIL** está castigando más al **criterio de evaluación** que al motor: el motor se comporta como se diseñó; el umbral no está adaptado a este tipo de datos.
+
+**Recomendaciones:**
+
+1. **Umbral configurable** según tipo de dataset (p. ej. OK ≥ 70%, WARN ≥ 50% para datos dispersos).
+2. **Documentar** que 85% es un objetivo para datos densos / cercanos a oficina.
+3. **No** usar el FAIL actual como indicador de “motor malo”; usarlo como “objetivo de cobertura no alcanzado con estos datos/reglas”.
+
+---
+
+## 5. Resumen
+
+| Pregunta | Respuesta |
+|----------|-----------|
+| ¿V6 está mal? | No; si V4 y V6 dan cobertura similar, el motor está alineado. |
+| ¿Por qué cobertura baja? | Datos (dispersión, poca densidad) + reglas (min_ok, exclude_radius). |
+| ¿85% es razonable? | Para este dataset, no; conviene umbral más bajo o configurable. |
+
+Ejecutando `analyze_block4_coverage_light` obtienes los números concretos (V4 vs V6, distancias, densidad) para validar este análisis en tu entorno.
