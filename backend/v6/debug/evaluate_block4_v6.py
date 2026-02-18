@@ -12,10 +12,9 @@ Criterios de nivel:
 - Determinismo: dos ejecuciones deben dar el mismo resultado.
 
 Uso (desde raíz del repo):
-  python -m backend.v6.debug.evaluate_block4_v6
-  python -m backend.v6.debug.evaluate_block4_v6 --coverage   # preset cobertura Optimob
-  python -m backend.v6.debug.evaluate_block4_v6 --map        # KPIs + mapa HTML (paradas, empleados, oficina)
-  python -m backend.v6.debug.evaluate_block4_v6 --coverage --map
+  python -m backend.v6.debug.evaluate_block4_v6              # por defecto: preset cobertura Optimob
+  python -m backend.v6.debug.evaluate_block4_v6 --map      # KPIs + mapa HTML
+  python -m backend.v6.debug.evaluate_block4_v6 --v4-parity # parámetros V4 estrictos (paridad)
 """
 
 import argparse
@@ -124,9 +123,9 @@ def run_evaluation(
     office_lat: float = DEFAULT_OFFICE_LAT,
     office_lng: float = DEFAULT_OFFICE_LNG,
     min_sep_m: float = MIN_STOP_SEP_M,
-    use_coverage_params: bool = False,
+    use_coverage_params: bool = True,
 ) -> dict:
-    """Ejecuta Block 4 V6 y devuelve métricas. Si use_coverage_params, usa preset cobertura Optimob."""
+    """Ejecuta Block 4 V6 y devuelve métricas. Por defecto usa preset cobertura Optimob; con use_coverage_params=False, parámetros V4 (paridad)."""
     if use_coverage_params:
         constraints = StructuralConstraints(
             assign_radius_m=1200.0,
@@ -304,9 +303,9 @@ def main():
         "--office-lng", type=float, default=DEFAULT_OFFICE_LNG, help="Longitud oficina"
     )
     parser.add_argument(
-        "--coverage",
+        "--v4-parity",
         action="store_true",
-        help="Preset cobertura: assign_radius=1200m, pair_radius=450m, min_ok adaptativo (6 en zona lejana)",
+        help="Usar parámetros V4 estrictos (radio 1000m, min_ok=8, sin segundo paso). Por defecto se usa preset cobertura.",
     )
     parser.add_argument(
         "--map",
@@ -321,14 +320,17 @@ def main():
 
     employees = load_employees(args.csv)
     print(f"Empleados cargados: {len(employees)} desde {args.csv}")
-    if args.coverage:
-        print("Preset: cobertura Optimob (radio 1200 m, reabsorción 450 m, min_ok adaptativo)")
+    use_coverage = not args.v4_parity
+    if use_coverage:
+        print("Preset: cobertura Optimob (radio 1200 m, reabsorción 450 m, min_ok adaptativo, asignar por distancia a parada)")
+    else:
+        print("Parámetros: V4 paridad (radio 1000 m, min_ok=8)")
 
     r = run_evaluation(
         employees,
         office_lat=args.office_lat,
         office_lng=args.office_lng,
-        use_coverage_params=args.coverage,
+        use_coverage_params=use_coverage,
     )
 
     # ---- KPIs (resumen) ----
