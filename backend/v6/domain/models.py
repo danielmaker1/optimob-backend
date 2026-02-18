@@ -3,7 +3,7 @@ V6 domain models. Dataclasses only. No FastAPI, no external deps beyond dataclas
 """
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 
 @dataclass(frozen=True)
@@ -44,6 +44,8 @@ class DailyPlan:
     shuttle_routes: List[dict]
     carpool_routes: List[dict]
     unassigned: List[str]
+    # Modo sombra: métricas del clustering legacy (generate_shuttle_candidates) para comparación
+    shuttle_shadow_metrics: Optional[dict] = None  # {"n_clusters": int, "coverage_pct": float}
 
 
 @dataclass

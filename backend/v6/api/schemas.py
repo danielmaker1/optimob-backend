@@ -19,6 +19,7 @@ class EmployeeSchema(BaseModel):
 class PlanRequest(BaseModel):
     employees: list[EmployeeSchema]
     date: str | None = None
+    include_shadow_metrics: bool = False  # incluir métricas del clustering legacy (generate) en la respuesta
 
 
 class ShuttleRouteSchema(BaseModel):
@@ -41,3 +42,4 @@ class DailyPlanSchema(BaseModel):
     shuttle_routes: list[ShuttleRouteSchema]
     carpool_routes: list[CarpoolRouteSchema]
     unassigned: list[str]
+    shuttle_shadow_metrics: dict | None = None  # modo sombra: n_clusters, coverage_pct del clustering legacy

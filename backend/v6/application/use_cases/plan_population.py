@@ -1,32 +1,57 @@
 """
 V6 plan population use case. Orchestrates domain. No FastAPI.
+
+Primera línea: Block 4 (paradas shuttle viables + carpool).
+Sombra: generate_shuttle_candidates opcional para métricas de comparación.
 """
 
 from datetime import date
+from typing import Optional
 
+from backend.v6.application.config import (
+    DEFAULT_OFFICE_LAT,
+    DEFAULT_OFFICE_LNG,
+    DEFAULT_STRUCTURAL_CONSTRAINTS,
+)
+from backend.v6.application.shuttle_candidates import get_shuttle_candidates_block4
 from backend.v6.domain.assignment import solve_assignment
+from backend.v6.domain.constraints import StructuralConstraints
 from backend.v6.domain.evaluation import evaluate_carpool, evaluate_shuttle
 from backend.v6.domain.models import DailyPlan, Employee
 from backend.v6.domain.option import generate_carpool_candidates, generate_shuttle_candidates
 
 
-def plan_population(employees: list[Employee], plan_date: str | None = None) -> DailyPlan:
+def plan_population(
+    employees: list[Employee],
+    plan_date: str | None = None,
+    office_lat: Optional[float] = None,
+    office_lng: Optional[float] = None,
+    constraints: Optional[StructuralConstraints] = None,
+    include_shadow_metrics: bool = False,
+) -> DailyPlan:
     """
-    Flow: shuttle_candidates -> residual -> carpool_candidates -> evaluate -> solve_assignment -> DailyPlan.
+    Flow: Block 4 shuttle_candidates + carpool_set -> residual -> carpool_candidates
+          -> evaluate -> solve_assignment -> DailyPlan.
     """
     if plan_date is None:
         plan_date = date.today().isoformat()
+    if office_lat is None:
+        office_lat = DEFAULT_OFFICE_LAT
+    if office_lng is None:
+        office_lng = DEFAULT_OFFICE_LNG
+    if constraints is None:
+        constraints = DEFAULT_STRUCTURAL_CONSTRAINTS
 
     all_ids = [e.employee_id for e in employees]
     employees_by_id = {e.employee_id: e for e in employees}
 
-    shuttle_candidates = generate_shuttle_candidates(employees)
-    shuttle_scored = [(opt, evaluate_shuttle(opt, employees_by_id)) for opt in shuttle_candidates]
+    # Primera línea: Block 4
+    shuttle_candidates, carpool_set = get_shuttle_candidates_block4(
+        employees, office_lat, office_lng, constraints
+    )
+    residual = [e for e in employees if e.employee_id in carpool_set]
 
-    assigned_by_shuttles: set[str] = set()
-    for opt in shuttle_candidates:
-        assigned_by_shuttles.update(opt.employee_ids)
-    residual = [e for e in employees if e.employee_id not in assigned_by_shuttles]
+    shuttle_scored = [(opt, evaluate_shuttle(opt, employees_by_id)) for opt in shuttle_candidates]
 
     carpool_candidates = generate_carpool_candidates(residual)
     carpool_scored = [(opt, evaluate_carpool(opt)) for opt in carpool_candidates]
@@ -53,9 +78,20 @@ def plan_population(employees: list[Employee], plan_date: str | None = None) -> 
         for c in assignment.selected_carpools
     ]
 
+    shadow_metrics: Optional[dict] = None
+    if include_shadow_metrics and employees:
+        shadow_opts = generate_shuttle_candidates(employees)
+        n_shadow = len(shadow_opts)
+        assigned_shadow = sum(len(o.employee_ids) for o in shadow_opts)
+        shadow_metrics = {
+            "n_clusters": n_shadow,
+            "coverage_pct": (assigned_shadow / len(employees) * 100.0) if employees else 0.0,
+        }
+
     return DailyPlan(
         date=plan_date,
         shuttle_routes=shuttle_routes,
         carpool_routes=carpool_routes,
         unassigned=assignment.unassigned_employee_ids,
+        shuttle_shadow_metrics=shadow_metrics,
     )

@@ -20,12 +20,17 @@ def post_plan(request: PlanRequest) -> DailyPlanSchema:
     try:
         raw = [e.model_dump() for e in request.employees]
         employees = load_employees(raw)
-        plan = plan_population(employees, plan_date=request.date)
+        plan = plan_population(
+            employees,
+            plan_date=request.date,
+            include_shadow_metrics=request.include_shadow_metrics,
+        )
         return DailyPlanSchema(
             date=plan.date,
             shuttle_routes=plan.shuttle_routes,
             carpool_routes=plan.carpool_routes,
             unassigned=plan.unassigned,
+            shuttle_shadow_metrics=plan.shuttle_shadow_metrics,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
