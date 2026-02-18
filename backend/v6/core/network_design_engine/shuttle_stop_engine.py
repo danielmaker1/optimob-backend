@@ -274,6 +274,24 @@ def run_shuttle_stop_opening(
             continue
         final_clusters_indices.append(mems)
 
+    # Segundo paso opcional: asignar residual por distancia al centro de parada (evita "rojo más cerca que gris")
+    assign_by_stop_radius = getattr(constraints, "assign_by_stop_radius_after", None) is True
+    if assign_by_stop_radius and final_clusters_indices and carpool_indices:
+        centroids_final = [cluster_center_xy(mems, X) for mems in final_clusters_indices]
+        for i in sorted(carpool_indices):
+            best_k: int | None = None
+            best_d: float = float("inf")
+            for k, mems in enumerate(final_clusters_indices):
+                if len(mems) >= cap:
+                    continue
+                d = float(np.linalg.norm(X[i] - centroids_final[k]))
+                if d <= radius and d < best_d:
+                    best_d = d
+                    best_k = k
+            if best_k is not None:
+                final_clusters_indices[best_k].append(i)
+                carpool_indices = carpool_indices - {i}
+
     final_clusters: List[List[str]] = [
         [ids[i] for i in cluster] for cluster in final_clusters_indices
     ]

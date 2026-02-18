@@ -138,6 +138,7 @@ def run_evaluation(
             min_ok_far_m=3000.0,
             min_ok_far=6,
             pair_radius_m=450.0,
+            assign_by_stop_radius_after=True,
         )
     else:
         constraints = StructuralConstraints(

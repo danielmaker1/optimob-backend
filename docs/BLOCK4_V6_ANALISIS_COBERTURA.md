@@ -8,6 +8,7 @@ Se añadieron opciones para **priorizar cobertura** sin romper paridad con V4:
 |--------|--------|--------|
 | **min_ok adaptativo** | Motor | Clusters con centroide a **> 3 km** de oficina pueden mantenerse con **≥ 6** miembros (en vez de 8). Zonas dispersas ganan paradas. |
 | **Preset cobertura** | `StructuralConstraints` opcionales | `min_ok_far_m=3000`, `min_ok_far=6`, `pair_radius_m=450`, `assign_radius_m=1200` para más asignación. |
+| **Asignar por distancia a parada** | `assign_by_stop_radius_after=True` | Segundo paso: todo residual que quede a ≤ radio de una parada (y con hueco) se asigna a la parada más cercana. Evita que haya excluidos más cerca del centro de una parada que algunos asignados (reabsorción solo mira distancia a *miembros*, no al centro). Incluido en preset `--coverage`. |
 | **Evaluador** | `evaluate_block4_v6 --coverage` | Ejecuta con preset cobertura y muestra métricas. |
 
 **Uso del preset en evaluación:**

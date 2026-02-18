@@ -18,6 +18,7 @@ class StructuralConstraints:
     min_ok_far_m: Optional[float] = None  # distancia (m) a oficina para usar min_ok_far en zona lejana
     min_ok_far: Optional[int] = None  # min miembros por cluster en zona lejana (ej. 6)
     pair_radius_m: Optional[float] = None  # radio (m) para reabsorber residual en paradas; mayor = más cobertura
+    assign_by_stop_radius_after: Optional[bool] = None  # True = segundo paso: asignar residual por distancia a centro de parada
 
 
 @dataclass(frozen=True)
