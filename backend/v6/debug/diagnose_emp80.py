@@ -106,8 +106,10 @@ def main():
         print("CONCLUSIÓN: BUG. Emp_80 está en carpool pero hay al menos una parada")
         print("  dentro del radio con hueco → debería haber sido asignado en el segundo paso.")
     elif in_carpool and not candidatas:
-        print("CONCLUSIÓN: No bug. Emp_80 en carpool; todas las paradas a ≤1200 m están")
-        print("  al cap (50) → se llenaron antes en el orden del segundo paso.")
+        print("CONCLUSIÓN: No bug. La regla es: asignar si distancia al centroide ≤ 1200 m.")
+        print("  Emp_80 está a 1458 m, 1905 m y 1807 m de paradas 1, 9 y 12 → fuera del radio.")
+        print("  El círculo azul del mapa es la EXTENSIÓN del cluster (max dist. entre miembros),")
+        print("  no el radio de asignación; por eso puede verse 'dentro' del círculo y seguir en carpool.")
     else:
         print("CONCLUSIÓN: Emp_80 no está en carpool (ya asignado).")
     print("=" * 60)

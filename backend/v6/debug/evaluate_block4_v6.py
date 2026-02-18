@@ -219,6 +219,7 @@ def _build_map(
     office_lng: float,
     out_path: Path,
     open_browser: bool = True,
+    assign_radius_m: float | None = None,
 ) -> None:
     """Genera mapa Folium: empleados, paradas V6, oficina. Guarda HTML y opcionalmente abre en navegador."""
     import webbrowser
@@ -258,6 +259,15 @@ def _build_map(
             weight=2,
             dash_array="5,5",
         ).add_to(m)
+        if assign_radius_m is not None and assign_radius_m > 0:
+            folium.Circle(
+                location=(lat, lng),
+                radius=assign_radius_m,
+                color="darkblue",
+                fill=False,
+                weight=1,
+                dash_array="2,4",
+            ).add_to(m)
     folium.Marker(
         location=[office_lat, office_lng],
         popup="Oficina",
@@ -270,6 +280,8 @@ def _build_map(
     <p><span style="color:gray;">● Gris</span> = Asignados shuttle</p>
     <p><span style="color:red;">● Rojo</span> = Excluidos (carpool/residual)</p>
     <p><span style="color:blue;">● Azul</span> = Paradas shuttle</p>
+    <p><span style="color:blue;">○ Círculo grueso</span> = Extensión del cluster</p>
+    <p><span style="color:darkblue;">○ Círculo fino</span> = Radio de asignación (solo si estás dentro se asigna)</p>
     <p><span style="color:green;">■ Verde</span> = Oficina</p>
     </div>
     """
@@ -376,6 +388,7 @@ def main():
             args.office_lng,
             out_path,
             open_browser=True,
+            assign_radius_m=r.get("assign_radius_m"),
         )
 
     return 0
