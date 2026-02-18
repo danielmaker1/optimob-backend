@@ -112,12 +112,31 @@ Con **poca densidad** y **dispersión**:
 
 ---
 
-## 5. Resumen
+## 5. Solape entre clusters (trade-off cobertura vs redundancia)
+
+El **solape** que se ve en el mapa (varios círculos azules cubriendo la misma zona) es **esperado**, no un fallo:
+
+- Los **centros** de parada solo se separan por **min_sep** (p. ej. 350 m).
+- Cada parada tiene **radio de cobertura** mucho mayor: **assign_radius** (1000–1200 m).
+- Con 350 m entre centros y 1000 m de radio, los círculos se solapan en zonas densas. El algoritmo no intenta reducir solape; prioriza cobertura.
+
+**Implicaciones:**
+
+- **Asignación:** Cada empleado pertenece a **una sola** parada (la más cercana con capacidad). El solape es visual, no ambigüedad operativa.
+- **Negocio:** Muchos círculos solapados implican **más paradas** en poco espacio → posible redundancia y mayor coste (más rutas/paradas). A cambio se obtiene buena cobertura y clusters compactos.
+- **Trade-off:** Menos solape (p. ej. subir `min_sep` a 500–600 m) reduciría paradas en zonas densas pero podría bajar algo la cobertura. Es una decisión de diseño: priorizar cobertura y calidad de cluster vs. menos paradas y menor coste.
+
+El evaluador incluye un indicador de **paradas con solape** (cuántas tienen al menos otra parada a ≤ radio) para poder decidir si se quiere actuar (p. ej. aumentar `min_sep` o usar un preset “bajo solape” en el futuro).
+
+---
+
+## 6. Resumen
 
 | Pregunta | Respuesta |
 |----------|-----------|
 | ¿V6 está mal? | No; si V4 y V6 dan cobertura similar, el motor está alineado. |
 | ¿Por qué cobertura baja? | Datos (dispersión, poca densidad) + reglas (min_ok, exclude_radius). |
 | ¿85% es razonable? | Para este dataset, no; conviene umbral más bajo o configurable. |
+| ¿Por qué hay tanto solape? | min_sep << assign_radius; es el trade-off actual (cobertura vs. redundancia). |
 
 Ejecutando `analyze_block4_coverage_light` obtienes los números concretos (V4 vs V6, distancias, densidad) para validar este análisis en tu entorno.

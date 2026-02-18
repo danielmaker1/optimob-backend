@@ -161,6 +161,18 @@ def run_evaluation(
     )
     det_ok, det_msg = check_determinism(employees, office_lat, office_lng, constraints)
 
+    assign_radius_m = constraints.assign_radius_m
+    overlap_stops = 0
+    if len(final_clusters) >= 2:
+        id_to_index = {e.employee_id: i for i, e in enumerate(employees)}
+        X = _lat_lon_to_meters(employees, office_lat, office_lng)
+        centroids = _cluster_centroids_meters(final_clusters, employees, id_to_index, X)
+        for i in range(len(centroids)):
+            for j in range(len(centroids)):
+                if i != j and float(np.linalg.norm(centroids[i] - centroids[j])) <= assign_radius_m:
+                    overlap_stops += 1
+                    break
+
     return {
         "n_employees": n,
         "n_clusters": len(final_clusters),
@@ -175,6 +187,8 @@ def run_evaluation(
         "determinism_msg": det_msg,
         "final_clusters": final_clusters,
         "carpool_set": carpool_set,
+        "overlap_stops": overlap_stops,
+        "assign_radius_m": assign_radius_m,
     }
 
 
@@ -320,6 +334,7 @@ def main():
     # ---- KPIs (resumen) ----
     print("\n--- KPIs Block 4 V6 ---")
     print(f"  Cobertura: {r['coverage_pct']:.1f}%  |  Paradas: {r['n_clusters']}  |  Asignados shuttle: {r['n_employees'] - r['n_excluded']}  |  Excluidos: {r['n_excluded']}  |  Tamaño medio: {r['mean_size']:.1f}")
+    print(f"  Paradas con solape (otra parada a ≤{r['assign_radius_m']:.0f}m): {r['overlap_stops']} de {r['n_clusters']}  |  Dist. mínima entre paradas: {r['min_pairwise_m']:.0f}m")
 
     # ---- Métricas ----
     print("\n--- Métricas Block 4 V6 ---")
