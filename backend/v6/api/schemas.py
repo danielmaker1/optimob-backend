@@ -9,17 +9,29 @@ class EmployeeSchema(BaseModel):
     employee_id: str
     home_lat: float
     home_lng: float
-    work_lat: float
-    work_lng: float
-    arrival_window_start: str
-    arrival_window_end: str
-    willing_driver: bool
+    work_lat: float = 0.0
+    work_lng: float = 0.0
+    arrival_window_start: str = ""
+    arrival_window_end: str = ""
+    willing_driver: bool = False
+
+
+class EmployeeOverrideSchema(BaseModel):
+    """Override por empleado (ej. desde app): prioridad sobre datos empresa. Solo los enviados se aplican."""
+    employee_id: str
+    home_lat: float | None = None
+    home_lng: float | None = None
+    willing_driver: bool | None = None
+    arrival_window_start: str | None = None  # ej. "09:00" -> hora_obj_min para carpool
+    hora_obj_min: float | None = None  # minutos desde medianoche; si se envía, tiene prioridad sobre arrival_window_start
 
 
 class PlanRequest(BaseModel):
     employees: list[EmployeeSchema]
     date: str | None = None
     include_shadow_metrics: bool = False  # incluir métricas del clustering legacy (generate) en la respuesta
+    # Opcional: overrides desde app; se aplican sobre employees (prioridad empleado).
+    employee_overrides: list[EmployeeOverrideSchema] | None = None
 
 
 class ShuttleRouteSchema(BaseModel):

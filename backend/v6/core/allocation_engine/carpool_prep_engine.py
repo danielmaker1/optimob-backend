@@ -43,7 +43,7 @@ def run_carpool_prep(
                 office_lon=office_lng,
                 is_driver=is_driver,
                 seats_driver=seats,
-                hora_obj_min=None,
+                hora_obj_min=e.hora_obj_min,
                 cap_efectiva=cap_eff,
             )
         )

@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 
 from backend.v6.api.schemas import DailyPlanSchema, PlanRequest
 from backend.v6.application.use_cases.plan_population import plan_population
-from backend.v6.infrastructure.population_loader import load_employees
+from backend.v6.infrastructure.population_loader import build_census_with_overrides, load_employees
 
 router = APIRouter()
 
@@ -15,11 +15,16 @@ router = APIRouter()
 def post_plan(request: PlanRequest) -> DailyPlanSchema:
     """
     POST /v6/plan
-    Accepts list of employees. Returns DailyPlan.
+    Accepts list of employees. Optional employee_overrides (from app): applied with employee priority.
     """
     try:
         raw = [e.model_dump() for e in request.employees]
-        employees = load_employees(raw)
+        base = load_employees(raw)
+        if request.employee_overrides:
+            overrides = [o.model_dump() for o in request.employee_overrides]
+            employees = build_census_with_overrides(base, overrides)
+        else:
+            employees = base
         plan = plan_population(
             employees,
             plan_date=request.date,

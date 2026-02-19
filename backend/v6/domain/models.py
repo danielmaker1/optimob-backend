@@ -12,6 +12,10 @@ class Employee:
     home_lat: float
     home_lng: float
     willing_driver: bool
+    # Opcional: minuto del día (desde medianoche) para ventana de llegada; usado en carpool (prioridad app/empleado).
+    hora_obj_min: Optional[float] = None
+    # Opcional: minuto del día (desde medianoche) para ventana de llegada; usado en carpool (prioridad app/empleado).
+    hora_obj_min: Optional[float] = None
 
 
 @dataclass(frozen=True)
