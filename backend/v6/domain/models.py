@@ -72,6 +72,58 @@ class NetworkDesign:
     baseline_cost_per_seat: float
 
 
+# --- Carpool 6A/6B (V4 Block 6) ---
+
+
+@dataclass(frozen=True)
+class CarpoolPerson:
+    """Una persona en el censo carpool: conductor o pasajero."""
+    person_id: str
+    lat: float
+    lng: float
+    office_lat: float
+    office_lon: float
+    is_driver: bool
+    seats_driver: int  # 0 si pasajero
+    hora_obj_min: Optional[float] = None  # minutos desde medianoche, opcional
+    cap_efectiva: int = 0  # max(0, seats_driver - 1) para conductores
+
+
+@dataclass(frozen=True)
+class MeetingPoint:
+    """Punto de encuentro carpool (salida de DBSCAN + cluster suave)."""
+    id_mp: str
+    lat: float
+    lng: float
+
+
+@dataclass(frozen=True)
+class CarpoolMatch:
+    """Un match (conductor, pasajero, MP) con métricas."""
+    driver_id: str
+    pax_id: str
+    id_mp: str
+    mp_lat: float
+    mp_lng: float
+    walk_m: float
+    detour_min: float
+    detour_ratio: float
+    eta_oficina_min: float
+    cost: float
+
+
+@dataclass
+class DriverRoute:
+    """Ruta de un conductor: orden de MPs, duración, detour, pax."""
+    driver_id: str
+    order_mp_ids: List[str]
+    total_dur_min: float
+    detour_min: float
+    detour_ratio: float
+    n_pax: int
+    pax_by_mp: Optional[dict] = None  # id_mp -> list of pax_id (opcional)
+
+
 @dataclass(frozen=True)
 class Reservation:
     employee_id: str

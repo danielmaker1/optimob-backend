@@ -33,3 +33,22 @@ class TriggerPolicy:
 class AllocationPolicy:
     prioritize_no_alternative: bool
     use_reservation_order: bool
+
+
+# Carpool 6B: parámetros de matching (V4 CFG_MATCH)
+@dataclass(frozen=True)
+class CarpoolMatchConfig:
+    dbscan_eps_m: float = 500.0
+    dbscan_min_samples: int = 3
+    mp_cluster_eps_m: float = 300.0
+    max_walk_m: float = 800.0
+    k_mp_pax: int = 5
+    max_detour_min: float = 25.0
+    max_detour_ratio: float = 1.6
+    alpha_walk: float = 1.0
+    beta_detour: float = 60.0
+    gamma_eta_off: float = 2.0
+    delta_occupancy_bonus: float = 50.0
+    max_drivers_per_mp: int = 40
+    min_passengers_per_driver: int = 1
+    do_2opt: bool = True
