@@ -193,7 +193,7 @@ def main() -> int:
 
     print("\n--- KPIs Carpool 6B ---")
     print(f"  MPs:                      {result.n_mp}")
-    print(f"  Candidatos:               {result.n_candidates}")
+    print(f"  Candidatos (tripletas driver,pax,MP viables): {result.n_candidates}")
     print(f"  Matches (driver, pax, MP): {result.n_matches}")
     print(f"  Conductores con ≥1 pax:   {len(result.driver_routes)}")
     print(f"  Pax no asignados:         {result.n_unmatched}")
