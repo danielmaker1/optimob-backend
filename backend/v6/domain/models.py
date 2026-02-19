@@ -124,6 +124,20 @@ class DriverRoute:
     pax_by_mp: Optional[dict] = None  # id_mp -> list of pax_id (opcional)
 
 
+@dataclass
+class CarpoolMatchResult:
+    """Salida del motor 6B con métricas para observabilidad (MVP frugal)."""
+    matches: List[CarpoolMatch]
+    driver_routes: List[DriverRoute]
+    unmatched_pax_ids: List[str]
+    n_mp: int
+    n_candidates: int
+    n_matches: int
+    n_unmatched: int
+    duration_ms: float
+    unmatched_reasons: Optional[dict] = None  # pax_id -> "no_candidate" | "trimmed_by_detour"
+
+
 @dataclass(frozen=True)
 class Reservation:
     employee_id: str

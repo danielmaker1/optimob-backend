@@ -3,7 +3,8 @@ Carpool match (6B). MPs por DBSCAN, candidatos con coste α·walk + β·detour +
 matching greedy con bonus δ, routing cheapest insertion + 2-opt, validación detour.
 """
 
-from typing import List, Tuple
+import time
+from typing import Dict, List, Tuple
 
 import numpy as np
 from sklearn.cluster import DBSCAN
@@ -12,6 +13,7 @@ from sklearn.neighbors import BallTree
 from backend.v6.domain.constraints import CarpoolMatchConfig
 from backend.v6.domain.models import (
     CarpoolMatch,
+    CarpoolMatchResult,
     CarpoolPerson,
     DriverRoute,
     MeetingPoint,
@@ -145,22 +147,37 @@ def run_carpool_match(
     office_lng: float,
     adapter: CarpoolTimeAdapter,
     config: CarpoolMatchConfig,
-) -> Tuple[List[CarpoolMatch], List[DriverRoute], List[str]]:
+) -> CarpoolMatchResult:
     """
     Ejecuta el matching carpool (6B): MPs → candidatos → greedy → routing 2-opt → validación detour.
-    Devuelve (matches, driver_routes, unmatched_pax_ids).
+    Devuelve CarpoolMatchResult (matches, rutas, unmatched y métricas para observabilidad).
     """
+    t0 = time.perf_counter()
     drivers = [p for p in census if p.is_driver]
     pax_list = [p for p in census if not p.is_driver]
     if not pax_list:
-        return [], [], []
+        return CarpoolMatchResult(
+            matches=[], driver_routes=[], unmatched_pax_ids=[p.person_id for p in pax_list],
+            n_mp=0, n_candidates=0, n_matches=0, n_unmatched=len(pax_list),
+            duration_ms=(time.perf_counter() - t0) * 1000.0, unmatched_reasons=None,
+        )
     if not drivers:
-        return [], [], [p.person_id for p in pax_list]
+        return CarpoolMatchResult(
+            matches=[], driver_routes=[], unmatched_pax_ids=[p.person_id for p in pax_list],
+            n_mp=0, n_candidates=0, n_matches=0, n_unmatched=len(pax_list),
+            duration_ms=(time.perf_counter() - t0) * 1000.0,
+            unmatched_reasons={p.person_id: "no_drivers" for p in pax_list},
+        )
 
     # 1) MPs
     mps = _mps_por_cobertura(census, config, adapter)
     if not mps:
-        return [], [], [p.person_id for p in pax_list]
+        return CarpoolMatchResult(
+            matches=[], driver_routes=[], unmatched_pax_ids=[p.person_id for p in pax_list],
+            n_mp=0, n_candidates=0, n_matches=0, n_unmatched=len(pax_list),
+            duration_ms=(time.perf_counter() - t0) * 1000.0,
+            unmatched_reasons={p.person_id: "no_mp" for p in pax_list},
+        )
 
     D, P, M = len(drivers), len(pax_list), len(mps)
     drv_lat = np.array([p.lat for p in drivers])
@@ -233,8 +250,14 @@ def run_carpool_match(
                     )
                 )
 
+    n_candidates = len(cand_rows)
     if not cand_rows:
-        return [], [], [p.person_id for p in pax_list]
+        return CarpoolMatchResult(
+            matches=[], driver_routes=[], unmatched_pax_ids=[p.person_id for p in pax_list],
+            n_mp=len(mps), n_candidates=0, n_matches=0, n_unmatched=len(pax_list),
+            duration_ms=(time.perf_counter() - t0) * 1000.0,
+            unmatched_reasons={p.person_id: "no_candidate" for p in pax_list},
+        )
 
     # 4) Greedy match
     cap_left = {p.person_id: p.cap_efectiva for p in drivers}
@@ -368,4 +391,22 @@ def run_carpool_match(
     ]
     assigned_after_trim = {m.pax_id for m in matches_filtered}
     unmatched = [p.person_id for p in pax_list if p.person_id not in assigned_after_trim]
-    return matches_filtered, driver_routes, unmatched
+    # Razones para observabilidad (MVP frugal)
+    unmatched_reasons: Dict[str, str] = {}
+    for pax_id in unmatched:
+        if pax_id in assigned_pax:
+            unmatched_reasons[pax_id] = "trimmed_by_detour"
+        else:
+            unmatched_reasons[pax_id] = "no_candidate"
+    duration_ms = (time.perf_counter() - t0) * 1000.0
+    return CarpoolMatchResult(
+        matches=matches_filtered,
+        driver_routes=driver_routes,
+        unmatched_pax_ids=unmatched,
+        n_mp=len(mps),
+        n_candidates=n_candidates,
+        n_matches=len(matches_filtered),
+        n_unmatched=len(unmatched),
+        duration_ms=duration_ms,
+        unmatched_reasons=unmatched_reasons,
+    )

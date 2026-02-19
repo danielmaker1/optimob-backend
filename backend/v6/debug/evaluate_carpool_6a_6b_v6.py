@@ -187,26 +187,32 @@ def main() -> int:
 
     adapter = HaversineCarpoolAdapter(speed_kmh=30.0)
     config = CarpoolMatchConfig()
-    matches, driver_routes, unmatched = run_carpool_match(
+    result = run_carpool_match(
         census, DEFAULT_OFFICE_LAT, DEFAULT_OFFICE_LNG, adapter, config
     )
 
     print("\n--- KPIs Carpool 6B ---")
-    print(f"  Matches (driver, pax, MP): {len(matches)}")
-    print(f"  Conductores con ≥1 pax:   {len(driver_routes)}")
-    print(f"  Pax asignados:            {len(matches)}")
-    print(f"  Pax no asignados:         {len(unmatched)}")
-    if driver_routes:
-        n_pax_list = [r.n_pax for r in driver_routes]
+    print(f"  MPs:                      {result.n_mp}")
+    print(f"  Candidatos:               {result.n_candidates}")
+    print(f"  Matches (driver, pax, MP): {result.n_matches}")
+    print(f"  Conductores con ≥1 pax:   {len(result.driver_routes)}")
+    print(f"  Pax no asignados:         {result.n_unmatched}")
+    print(f"  Tiempo motor (ms):        {result.duration_ms:.0f}")
+    if result.unmatched_reasons:
+        from collections import Counter
+        reasons = Counter(result.unmatched_reasons.values())
+        print(f"  Motivos sin match:          {dict(reasons)}")
+    if result.driver_routes:
+        n_pax_list = [r.n_pax for r in result.driver_routes]
         print(f"  Pax por conductor (min/max/med): {min(n_pax_list)} / {max(n_pax_list)} / {sum(n_pax_list)/len(n_pax_list):.1f}")
 
     if args.map and census:
         out_path = Path(__file__).resolve().parent / "carpool_6a_6b_map.html"
         _build_carpool_map(
             census,
-            matches,
-            driver_routes,
-            unmatched,
+            result.matches,
+            result.driver_routes,
+            result.unmatched_pax_ids,
             DEFAULT_OFFICE_LAT,
             DEFAULT_OFFICE_LNG,
             out_path,
